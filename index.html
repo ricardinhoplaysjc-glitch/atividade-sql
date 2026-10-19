@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizador SQL</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+</head>
+<body>
+    <h1>Visualizador de Arquivo SQL</h1>
+    <p>Selecione um arquivo <strong>.sql</strong> para abrir e executar no navegador.</p>
+
+    <input type="file" id="arquivo" accept=".sql">
+    <button id="btnAbrir">Abrir e executar</button>
+
+    <h2>Conteúdo do arquivo</h2>
+    <pre id="conteudoSQL">(nenhum arquivo carregado)</pre>
+
+    <h2>Resultado da consulta</h2>
+    <div id="saida"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
