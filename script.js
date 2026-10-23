@@ -42,7 +42,7 @@ botao.addEventListener('click', async () => {
         const nomeTabela = tabelas[0].values[0][0];
 
         // 5. Consulta os dados e monta a tabela HTML
-        const dados = banco.exec('SELECT * FROM "' + nomeTabela.replace(/"/g, '""') + '"');
+        const dados = banco.exec(conteudo);
 
         if (dados.length === 0) {
             saida.innerHTML = '<p>A tabela está vazia.</p>';
