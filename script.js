@@ -1,4 +1,5 @@
 
+
 const entrada = document.getElementById('arquivo');
 const botao = document.getElementById('btnAbrir');
 const conteudoSQL = document.getElementById('conteudoSQL');
@@ -9,16 +10,17 @@ botao.addEventListener('click', async () => {
     conteudoSQL.textContent = '(nenhum arquivo carregado)';
 
     if (entrada.files.length === 0) {
-        saida.innerHTML = '<p class="erro">Selecione um arquivo .sql primeiro.</p>';
+        saida.textContent = 'Selecione um arquivo .sql primeiro.';
+        saida.className = 'erro';
         return;
     }
 
-    // 1. Lê o arquivo escolhido pelo usuário
+    // 1. Lê o arquivo SQL
     const conteudo = await entrada.files[0].text();
     conteudoSQL.textContent = conteudo;
 
     try {
-        // 2. Cria um banco SQLite na memória do navegador
+        // 2. Inicializa o SQLite no navegador
         const SQL = await initSqlJs({
             locateFile: arquivo =>
                 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/' + arquivo
@@ -26,54 +28,71 @@ botao.addEventListener('click', async () => {
 
         const banco = new SQL.Database();
 
-        // 3. Executa todos os comandos do arquivo (CREATE, INSERT...)
-        banco.exec(conteudo);
+        // 3. Separa os comandos SQL
+        const comandos = conteudo
+            .split(';')
+            .map(comando => comando.trim())
+            .filter(comando => comando.length > 0);
 
-        // 4. Descobre o nome da primeira tabela criada
-        const tabelas = banco.exec(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        );
+        let resultados = [];
 
-        if (tabelas.length === 0) {
-            saida.innerHTML = '<p class="erro">O arquivo não criou nenhuma tabela.</p>';
+        // 4. Executa cada comando individualmente
+        for (const comando of comandos) {
+            const resultado = banco.exec(comando);
+
+            // Guarda somente os resultados dos comandos SELECT
+            if (/^\s*SELECT\b/i.test(comando)) {
+                resultados.push(...resultado);
+            }
+        }
+
+        // 5. Verifica se houve alguma consulta SELECT
+        if (resultados.length === 0) {
+            saida.textContent =
+                'Nenhum resultado encontrado. Verifique se o arquivo contém um SELECT.';
             return;
         }
 
-        const nomeTabela = tabelas[0].values[0][0];
+        // 6. Monta a tabela com as colunas selecionadas
+        let html = '';
 
-        // 5. Consulta os dados e monta a tabela HTML
-        const dados = banco.exec(conteudo);
+        for (const dados of resultados) {
+            html += '<table><thead><tr>';
 
-        if (dados.length === 0) {
-            saida.innerHTML = '<p>A tabela está vazia.</p>';
-            return;
-        }
-
-        let html = '<table><tr>';
-
-        for (const coluna of dados[0].columns) {
-            html += '<th>' + coluna + '</th>';
-        }
-
-        html += '</tr>';
-
-        for (const linha of dados[0].values) {
-            html += '<tr>';
-
-            for (const valor of linha) {
-                html += '<td>' + (valor ?? '') + '</td>';
+            for (const coluna of dados.columns) {
+                html += '<th>' + escaparHTML(coluna) + '</th>';
             }
 
-            html += '</tr>';
+            html += '</tr></thead><tbody>';
+
+            for (const linha of dados.values) {
+                html += '<tr>';
+
+                for (const valor of linha) {
+                    html += '<td>' + escaparHTML(valor ?? '') + '</td>';
+                }
+
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
         }
 
-        html += '</table>';
         saida.innerHTML = html;
 
     } catch (erro) {
-        saida.innerHTML =
-            '<p class="erro">Erro ao executar o SQL: ' +
-            erro.message +
-            '</p>';
+        saida.textContent = 'Erro ao executar o SQL: ' + erro.message;
+        saida.className = 'erro';
     }
 });
+
+// 7. Evita interpretar os dados do banco como HTML
+function escaparHTML(valor) {
+    return String(valor)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
